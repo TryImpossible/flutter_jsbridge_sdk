@@ -56,10 +56,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     server.serve().then((final InternetAddress value) {
       setState(() {
-        _initialUrl = 'http://${value.address}:${server.boundPort!}/demo.html';
-        // _initialUrl = 'http://192.168.1.4:5500/demo.html';
-        // _initialUrl = 'http://192.168.101.15:5500/demo.html';
-        debugPrint('initialUrl: $_initialUrl');
+        _initialUrl =
+            'http://${value.address}:${server.boundPort!}/example.html';
       });
     });
   }
@@ -87,16 +85,18 @@ class _MyHomePageState extends State<MyHomePage> {
         ? Expanded(
             child: WebView(
               onWebViewCreated: (WebViewController controller) {
-                jsBridge.messageEmitter = controller.runJavascript;
-                jsBridge.debug = true;
+                jsBridge.init(
+                  messageRunner: controller.runJavascript,
+                  debug: true,
+                );
               },
               initialUrl: _initialUrl!,
               javascriptMode: JavascriptMode.unrestricted,
               javascriptChannels: <JavascriptChannel>{
                 JavascriptChannel(
-                  name: jsBridge.channel.name,
+                  name: jsBridge.channelName,
                   onMessageReceived: (JavascriptMessage message) {
-                    jsBridge.channel.onMessageReceived(message.message);
+                    jsBridge.onMessageReceived(message.message);
                   },
                 ),
               },
@@ -137,10 +137,15 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 ElevatedButton(
                   child: const Text('callHandler'),
                   onPressed: () => _callHandler(),
+                ),
+                ElevatedButton(
+                  child: const Text('callNotExistHandler'),
+                  onPressed: () => _callNotExistHandler(),
                 ),
               ],
             ),
@@ -167,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _logString = msg;
     });
-    Future.delayed(Duration.zero, () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       _controller.animateTo(
         _controller.position.maxScrollExtent,
         duration: kThemeAnimationDuration,
@@ -179,9 +184,10 @@ class _MyHomePageState extends State<MyHomePage> {
   void _registerHandler() {
     _log('[register handler]');
     jsBridge.registerHandler<String>('FlutterEcho', (Object? data) async {
-      return 'success response from flutter';
+      // return Future<String>.value('success response from flutter');
+      // return 'success response from flutter';
       return Future.error('fail response from flutter');
-      throw Exception('fail response from flutter');
+      // throw Exception('fail response from flutter');
     });
   }
 
@@ -195,6 +201,20 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       final String data = await jsBridge.callHandler<String>(
         'JSEcho',
+        data: 'request from flutter',
+      );
+      _log('[call handler] success response: $data');
+    } catch (err) {
+      _log('[call handler] fail response: $err');
+    }
+  }
+
+  Future<void> _callNotExistHandler() async {
+    _log(
+        '[call handler] handerName: JSEchoNotExist, data: request from javascript');
+    try {
+      final String data = await jsBridge.callHandler<String>(
+        'JSEchoNotExist',
         data: 'request from flutter',
       );
       _log('[call handler] success response: $data');
