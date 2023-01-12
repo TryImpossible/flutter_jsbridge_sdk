@@ -1,12 +1,3 @@
-import 'jsbridge_types.dart';
-
-class JSBridgeChannel {
-  JSBridgeChannel({required this.name, required this.onMessageReceived});
-
-  final String name;
-  final JSBridgeMessageHandler onMessageReceived;
-}
-
 int _handlerId = 0;
 
 class JSBridgeMessage {

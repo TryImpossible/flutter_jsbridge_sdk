@@ -4,25 +4,16 @@ import 'dart:convert';
 import 'jsbridge_model.dart';
 import 'jsbridge_types.dart';
 
-/// FlutterJSBridgePlus 单例类
+/// FlutterJSBridge
 class JSBridge {
-  JSBridge._internal();
+  JSBridgeMessageRunner? _messageRunner;
 
-  factory JSBridge.getInstance() => _instance ??= JSBridge._internal();
+  /// 通道名称
+  String get channelName => 'FlutterWebView';
 
-  static JSBridge? _instance;
-
-  set debug(bool debug) => _debug = debug;
+  /// debug模式
+  bool get debug => _debug;
   bool _debug = false;
-
-  set messageEmitter(JSBridgeMessageEmitter? messageEmitter) =>
-      _messageEmitter = messageEmitter;
-  JSBridgeMessageEmitter? _messageEmitter;
-
-  JSBridgeChannel get channel => JSBridgeChannel(
-        name: 'FlutterJSBridgeChannel',
-        onMessageReceived: _onMessageReceived,
-      );
 
   /// 方法集合
   final Map<String, JSBridgeHandler> _handlers = <String, JSBridgeHandler>{};
@@ -30,10 +21,20 @@ class JSBridge {
   /// 回调集合
   final Map<int, Completer<Object?>> _completers = <int, Completer<Object?>>{};
 
+  /// 打印日志
   void _log(String msg) {
     if (_debug) {
       print(msg);
     }
+  }
+
+  /// 初始化
+  void init({
+    required JSBridgeMessageRunner messageRunner,
+    bool debug = false,
+  }) {
+    _messageRunner = messageRunner;
+    _debug = debug;
   }
 
   /// 注册方法
@@ -61,10 +62,10 @@ class JSBridge {
   }
 
   /// 监听jsbridge消息
-  void _onMessageReceived(String messageString) {
+  void onMessageReceived(String messageString) {
     final String decodeString = Uri.decodeFull(messageString);
     final Map<String, dynamic> jsonData = jsonDecode(decodeString);
-    _log('[javascriptJSBridgeChannel receiveMessage]: $jsonData');
+    _log('[FlutterJSBridge receiveMessage]: $jsonData');
     final JSBridgeMessage message = JSBridgeMessage.fromJson(jsonData);
     if (message.isRequest) {
       _senderCall(message);
@@ -76,12 +77,12 @@ class JSBridge {
 
   /// 发送jsbridge消息
   void _postMessage(Map<String, dynamic> jsonData) {
-    _log('[javascriptJSBridgeChannel postMessage]: $jsonData');
+    _log('[FlutterJSBridge postMessage]: $jsonData');
     final String jsonString = jsonEncode(jsonData);
     final String encodeString = Uri.encodeFull(jsonString);
     final String scriptString =
-        'javascriptJSBridgeChannel.onMessageReceived("$encodeString")';
-    _messageEmitter?.call(scriptString);
+        'WebViewJSBridge.onMessageReceived("$encodeString")';
+    _messageRunner?.call(scriptString);
   }
 
   /// 接收者调用方法
@@ -160,4 +161,4 @@ class JSBridge {
 }
 
 /// 定义一个top-level（全局）变量，页面引入该文件后可以直接使用jsBridge
-JSBridge jsBridge = JSBridge.getInstance();
+JSBridge jsBridge = JSBridge();
