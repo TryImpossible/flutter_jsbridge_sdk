@@ -1,3 +1,7 @@
 ## 1.0.0
 
-- Initial version.
+- 实现jsBridge功能
+    - init
+    - registerHandler
+    - unregisterHandler
+    - callHandler
